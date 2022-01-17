@@ -14,42 +14,45 @@ MISSING_INT_VAL = -1
 MISSING_FLOAT_VAL = -10.
 
 
-def test_create_collection_from_xml_error(xml_collection_error):
-    with pytest.raises(BGGItemNotFoundError, match=re.escape(xml_collection_error.findtext("*/message", default=MISSING_STR_VAL))):
-        create_collection_from_xml(xml_collection_error, TEST_INVALID_USER)
+@pytest.mark.which_collection("error")
+def test_create_collection_from_xml_error(xml_collection):
+    with pytest.raises(BGGItemNotFoundError, match=re.escape(xml_collection.findtext("*/message", default=MISSING_STR_VAL))):
+        create_collection_from_xml(xml_collection, TEST_INVALID_USER)
 
 
-def test_create_collection_from_xml_minimal(xml_collection_minimal):
+@pytest.mark.which_collection("minimal")
+def test_create_collection_from_xml_minimal(xml_collection):
     # in
-    collection = create_collection_from_xml(xml_collection_minimal, TEST_VALID_USER)
+    collection = create_collection_from_xml(xml_collection, TEST_VALID_USER)
 
     # post
     assert collection.owner == TEST_VALID_USER
 
 
-
-def test_add_collection_items_from_xml_without_stats(xml_collection_without_stats, mocker):
+@pytest.mark.which_collection("nostats")
+def test_add_collection_items_from_xml_without_stats(xml_collection, mocker):
     # pre
     with pytest.raises(BGGApiError, match="missing 'stats'"):
         collection = mocker.MagicMock(Collection)
 
         # in
-        add_collection_items_from_xml(collection, xml_collection_without_stats, "boardgame")
+        add_collection_items_from_xml(collection, xml_collection, "boardgame")
 
 
-def test_add_collection_items_from_xml_minimal(xml_collection_minimal, mocker):
+@pytest.mark.which_collection("minimal")
+def test_add_collection_items_from_xml_minimal(xml_collection, mocker):
     # pre
     collection = mocker.MagicMock(Collection)
 
     # in
-    add_collection_items_from_xml(collection, xml_collection_minimal, "boardgame")
+    add_collection_items_from_xml(collection, xml_collection, "boardgame")
 
     # post
     collection.add_game.assert_called()
     actual = collection.add_game.call_args.args[0]
     assert actual is not None
 
-    item = xml_collection_minimal.find("item[@subtype='boardgame']")
+    item = xml_collection.find("item[@subtype='boardgame']")
     expected = {
         "id": int(item.attrib.get("objectid", MISSING_INT_VAL)),
         "comment": "",
@@ -65,19 +68,20 @@ def test_add_collection_items_from_xml_minimal(xml_collection_minimal, mocker):
     assert actual == expected
 
 
-def test_add_collection_items_from_xml_brief(xml_collection_brief, mocker):
+@pytest.mark.which_collection("brief")
+def test_add_collection_items_from_xml_brief(xml_collection, mocker):
     # pre
     collection = mocker.MagicMock(Collection)
 
     # in
-    add_collection_items_from_xml(collection, xml_collection_brief, "boardgame")
+    add_collection_items_from_xml(collection, xml_collection, "boardgame")
 
     # post
     collection.add_game.assert_called()
     actual = collection.add_game.call_args.args[0]
     assert actual is not None
 
-    item = xml_collection_brief.find("item[@subtype='boardgame']")
+    item = xml_collection.find("item[@subtype='boardgame']")
     stats = item.find("stats")
     expected = {
         "id": int(item.attrib.get("objectid", MISSING_INT_VAL)),
@@ -103,19 +107,20 @@ def test_add_collection_items_from_xml_brief(xml_collection_brief, mocker):
     assert actual == expected
 
 
-def test_add_collection_items_from_xml_full(xml_collection_full, mocker):
+@pytest.mark.which_collection("full")
+def test_add_collection_items_from_xml(xml_collection, mocker):
     # pre
     collection = mocker.MagicMock(Collection)
 
     # in
-    add_collection_items_from_xml(collection, xml_collection_full, "boardgame")
+    add_collection_items_from_xml(collection, xml_collection, "boardgame")
 
     # post
     collection.add_game.assert_called()
     actual = collection.add_game.call_args.args[0]
     assert actual is not None
 
-    item = xml_collection_full.find("item[@subtype='boardgame']")
+    item = xml_collection.find("item[@subtype='boardgame']")
     stats = item.find("stats")
     private = item.find("privateinfo")
     expected = {

@@ -7,11 +7,13 @@ import pytest
 import sys
 import re
 import glob
+import inspect
 import xml.etree.ElementTree as ET
 
 
 from boardgamegeek import BGGClient, BGGClientLegacy, CacheBackendNone
 from boardgamegeek.objects.collection import Collection
+from collections import abc
 
 
 # Kinda hard to test without having a "test" user
@@ -127,27 +129,31 @@ def open_and_parse_xml(which_xml, params=None, allowAny=False):
 
 
 @pytest.fixture
-def xml_collection_minimal():
-    return open_and_parse_xml("collection@*&which=minimal")
-
-@pytest.fixture
-def xml_collection_brief():
-    return open_and_parse_xml("collection@*&which=brief")
-
-@pytest.fixture
-def xml_collection_error():
-    return open_and_parse_xml("collection", {
-        "username": TEST_INVALID_USER,
-        "subtype":"boardgame", "stats":1,
-    })
-
-@pytest.fixture
-def xml_collection_full():
-    return open_and_parse_xml("collection@*&which=full")
-
-@pytest.fixture
-def xml_collection_without_stats():
-    return open_and_parse_xml("collection@*&which=nostats", allowAny=True)
+def xml_collection(request):
+    marker = request.node.get_closest_marker("which_collection")
+    if marker is None:
+        kwargs = {"which_xml":"full","params":None}
+    else:
+        args = list(marker.args)
+        argspec = inspect.getfullargspec(open_and_parse_xml)
+        args += [None] * (len(argspec[0]) - len(args))
+        if isinstance(args[0], abc.Mapping):
+            # params passed first
+            args[1], args[0] = args[:2]
+        kwargs = dict(zip(argspec[0], args))
+        kwargs.update(marker.kwargs)
+    if "error" == kwargs["which_xml"]:
+        kwargs.update({
+            "which_xml": "collection",
+            "params": {
+                "username": TEST_INVALID_USER,
+                "subtype":"boardgame", "stats":1,
+        }   })
+    elif kwargs["params"] is None:
+        kwargs["which_xml"] = f"collection@*&which={kwargs['which_xml']}"
+    elif kwargs["which_xml"] is None:
+        kwargs["which_xml"] = "collection"
+    return open_and_parse_xml(**kwargs)
 
 
 @pytest.fixture
