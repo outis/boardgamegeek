@@ -343,7 +343,7 @@ def request_and_parse_xml(requests_session, url, params=None, timeout=15, retrie
                 continue
 
             if not r.headers.get("content-type").lower().startswith("text/xml"):
-                raise BGGApiError("non-XML reply")
+                raise BGGApiError(f'non-XML reply ("{r.text[:60]}")')
 
             xml = r.text
 
