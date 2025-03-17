@@ -179,6 +179,11 @@ def test_get_known_game_info_by_id_list(bgg, mocker):
                               videos=True, versions=True)
     check_game(game_list[0])
 
+def test_get_too_many_games(bgg, mocker):
+    mock_get = mocker.patch("requests.sessions.Session.get")
+    mock_get.side_effect = simulate_bgg
+
+    game_list = bgg.game_list(game_id_list=list(range(1,22)))
 
 def test_game_id_with_invalid_params(bgg):
     with pytest.raises(BGGValueError):

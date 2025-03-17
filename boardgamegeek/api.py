@@ -15,6 +15,7 @@ objects.
 from __future__ import unicode_literals
 
 import datetime
+import itertools
 import logging
 import sys
 import warnings
@@ -103,6 +104,7 @@ class BGGCommon(object):
     :param int retries: how many retries to perform in special cases
     :param float retry_delay: delay between retries, in seconds
     """
+    batchSize = 20
     def __init__(self, api_endpoint, cache, timeout, retries, retry_delay, requests_per_minute):
         self._search_api_url = api_endpoint + "/search"
         self._thing_api_url = api_endpoint + "/thing"
@@ -769,6 +771,23 @@ class BGGClient(BGGCommon):
                                         retry_delay=retry_delay,
                                         requests_per_minute=requests_per_minute)
 
+    def _request_by_batch(self, ids, params, tag, batchsize=BGGCommon.batchSize):
+        """
+        The XML APIs limit responses to 20 items. This method breaks requests into multiple batches and combines the results, hiding the limitation.
+        """
+        items = []
+        ids = itertools.batched(ids, batchsize)
+        for some_ids in ids:
+            params['id'] = ",".join([str(id) for id in some_ids])
+            batch = request_and_parse_xml(self.requests_session,
+                                          self._thing_api_url,
+                                          params=params,
+                                          timeout=self._timeout,
+                                          retries=self._retries,
+                                          retry_delay=self._retry_delay)
+            items += batch.findall(tag)
+        return items
+
     def get_game_id(self, name, choose=BGGChoose.FIRST):
         """
         Returns the BGG ID of a game, searching by name
@@ -817,21 +836,13 @@ class BGGClient(BGGCommon):
                   "historical": int(historical),
                   "marketplace": int(marketplace),
                   "stats": 1}
-
-        xml_root = request_and_parse_xml(self.requests_session,
-                                         self._thing_api_url,
-                                         params=params,
-                                         timeout=self._timeout,
-                                         retries=self._retries,
-                                         retry_delay=self._retry_delay)
-
-        xml_root = xml_root.findall("item")
-        if xml_root is None:
+        items = self._request_by_batch(game_id_list, params, 'item')
+        if items is None:
             msg = "invalid data for game ids: {}".format(game_id_list,)
             raise BGGApiError(msg)
 
         game_list = []
-        for i, game_root in enumerate(xml_root):
+        for i, game_root in enumerate(items):
             game = create_game_from_xml(game_root,
                                         game_id=game_id_list[i])
             game_list.append(game)
