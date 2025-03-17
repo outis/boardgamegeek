@@ -180,8 +180,8 @@ class MockResponse:
 
     :param str text: the text to be returned with the response
     """
-    def __init__(self, text, status_code=200):
-        self.headers = {"content-type": "text/xml"}
+    def __init__(self, text, status_code=200, content_type="text/xml"):
+        self.headers = {"content-type": content_type}
         self.status_code = status_code
         self.text = text
 
