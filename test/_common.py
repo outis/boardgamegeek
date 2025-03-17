@@ -51,6 +51,7 @@ else:
 
 # The top level directory for our XML files
 XML_PATH = os.path.join(os.path.dirname(__file__), "xml")
+TEXT_PATH = os.path.join(os.path.dirname(__file__), "text")
 STATUS_PATH = os.path.join(os.path.dirname(__file__), "status")
 
 @pytest.fixture
@@ -194,11 +195,16 @@ def simulate_bgg(url, params, timeout):
     query_string = '&'.join([str(k) + "=" + str(v) for k, v in sorted_params])
 
     filename = os.path.join(XML_PATH, fragment + "@" + query_string)
+    content_subtype = 'xml'
+    plain_path = os.path.join(TEXT_PATH, fragment + "@" + query_string)
+    if os.path.exists(plain_path):
+        filename = plain_path
+        content_subtype = 'plain'
 
-    with io.open(filename, "r", encoding="utf-8") as xmlfile:
-        response_text = xmlfile.read()
+    with io.open(filename, "r", encoding="utf-8") as response_file:
+        response_text = response_file.read()
 
-    return MockResponse(response_text)
+    return MockResponse(response_text, content_type='text/'+content_subtype)
 
 
 def simulate_legacy_bgg(url, params, timeout):
